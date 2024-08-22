@@ -46,16 +46,19 @@ public:
     virtual ~LogAppender() {};
     virtual void log(LogLevel::Level level, LogEvent::ptr event) = 0;
 
+    void setFormatter(LogFormatter::ptr val) { m_formatter = val;} 
+    LogFormatter::ptr getFormatter() const { return m_formatter;}
+
 protected:
     LogLevel::Level m_level;
-    
+    LogFormatter::ptr m_formatter;
 };
 
 
 //日志格式器
-class Logformatter{
+class LogFormatter{
 public:
-    typedef std::shared_ptr<LogAppender> ptr;
+    typedef std::shared_ptr<LogFormatter> ptr;
 
     std::string format(LogAppender::ptr event);
 
@@ -71,7 +74,7 @@ public:
     
     Logger(const std::string& name = "root");
 
-    void log(LogLevel::Level, level, LogEvent::ptr event);
+    void log(LogLevel::Level  level, LogEvent::ptr event);
 
     void debug(LogEvent::ptr event);
     void info(LogEvent::ptr event);
@@ -81,8 +84,8 @@ public:
 
     void addAppender(LogAppender::ptr appender);
     void delAppender(LogAppender::ptr appender);
-    LogLevel::Level getLevel() const { return m_level};
-    void (LogLevel::Level val) {m_level = val}; 
+    LogLevel::Level getLevel() const { return m_level;};
+    void setLevel(LogLevel::Level val) {m_level = val;}; 
 
 private:
     std::string m_name;
@@ -100,14 +103,17 @@ public:
 
 
 //定义输出到文件的Appender
-class FileLogAppender : public LogAppender {};
+class FileLogAppender : public LogAppender {
 public:
     typedef std::shared_ptr<FileLogAppender> ptr;
     FileLogAppender(const std::string& filename);
     void log(LogLevel::Level level, LogEvent::ptr event) override;
-private:
-    std::string m_name;
-    std::ofstream m_filestream;
-}
 
+    //重新打开文件，文件打开成功返回true
+    bool reopen();
+private:
+    std::string m_filename;
+    std::ofstream m_filestream;
+};
+}
 #endif
