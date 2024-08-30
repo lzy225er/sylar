@@ -6,6 +6,7 @@
 #include <list>
 #include <sstream>
 #include <fstream>
+#include <vector>
 
 
 namespace sylar {
@@ -54,16 +55,24 @@ protected:
     LogFormatter::ptr m_formatter;
 };
 
-
 //日志格式器
 class LogFormatter{
 public:
     typedef std::shared_ptr<LogFormatter> ptr;
-
-    std::string format(LogAppender::ptr event);
-
+    void init();
+    std::string format(LogEvent::ptr event);
+    LogFormatter(const std::string& pattern);
 private:
-
+    class FormatItem{
+    public:
+        typedef std::shared_ptr<FormatItem> ptr;
+        virtual ~FormatItem () {};
+        virtual void format(std::ostream& os, LogEvent::ptr event) = 0;
+        
+    };
+private:
+    std::string m_pattern;
+    std::vector<FormatItem::ptr> m_items;
 } ;
 
 
@@ -115,5 +124,7 @@ private:
     std::string m_filename;
     std::ofstream m_filestream;
 };
+
+
 }
 #endif
