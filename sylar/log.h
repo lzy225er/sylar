@@ -15,7 +15,8 @@ namespace sylar {
 class LogEvent{
 public:
     typedef std::shared_ptr<LogEvent> ptr;
-    LogEvent();
+    LogEvent(const char* file, int32_t line, uint32_t elapse
+            ,uint32_t thread_id, uint32_t fiber_id, uint64_t time);
 
     const char* getFile() const { return m_file;}
     int32_t getLine() const { return m_line;}
@@ -23,7 +24,8 @@ public:
     uint32_t getThreadId() const { return m_threadId;}
     uint32_t getFiberId() const { return m_fiberId;}
     uint64_t getTime() const { return m_time;}
-    const std::string& getContent() const {return m_content;}
+    std::string getContent() const { return m_ss.str(); }
+    std::stringstream& getSS() {return m_ss;}
 
 private:
     const char* m_file = nullptr;      //文件名
@@ -32,7 +34,7 @@ private:
     uint32_t m_threadId = 0;           //线程id
     uint32_t m_fiberId = 0;            //协程id
     uint64_t m_time;                   //时间戳
-    std::string m_content;
+    std::stringstream m_ss;
 
 };
 
@@ -77,7 +79,6 @@ public:
     class FormatItem{
     public:
         typedef std::shared_ptr<FormatItem> ptr;
-        FormatItem(const std::string& fmt = "") {};
         virtual ~FormatItem () {};
         virtual void format(std::ostream& os, std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::ptr event) = 0;
         
@@ -91,7 +92,7 @@ private:
 
 
 //日志器
-class Logger{
+class Logger : public std::enable_shared_from_this<Logger> {
 public:
     typedef std::shared_ptr<Logger> ptr;
     
@@ -116,6 +117,7 @@ private:
     std::string m_name;
     LogLevel::Level m_level;
     std::list<LogAppender::ptr> m_appenders;           //appender集合
+    LogFormatter::ptr m_formatter;
 };
 
 //输出到控制台的Appender
@@ -123,7 +125,7 @@ class StdoutLogAppender : public LogAppender {
 public:
     typedef std::shared_ptr<StdoutLogAppender> ptr;
 
-    void log(std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::ptr event) override;
+    void log(Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event) override;
 };
 
 
@@ -132,7 +134,7 @@ class FileLogAppender : public LogAppender {
 public:
     typedef std::shared_ptr<FileLogAppender> ptr;
     FileLogAppender(const std::string& filename);
-    void log(std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::ptr event) override;
+    void log(Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event) override;
 
     //重新打开文件，文件打开成功返回true
     bool reopen();

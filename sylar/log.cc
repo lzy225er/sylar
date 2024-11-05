@@ -148,20 +148,19 @@ private:
 };
 
 
-// LogEvent::LogEvent(std::shared_ptr<Logger> logger, LogLevel::Level level
-//             ,const char* file, int32_t line, uint32_t elapse
-//             ,uint32_t thread_id, uint32_t fiber_id, uint64_t time
-//             ,const std::string& thread_name)
-//     :m_file(file)
-//     ,m_line(line)
-//     ,m_elapse(elapse)
-//     ,m_threadId(thread_id)
-//     ,m_fiberId(fiber_id)
-//     ,m_time(time)
-//     ,m_threadName(thread_name)
-//     ,m_logger(logger)
-//     ,m_level(level) {
-// }
+LogEvent::LogEvent(const char* file, int32_t line, uint32_t elapse
+            ,uint32_t thread_id, uint32_t fiber_id, uint64_t time)
+    :m_file(file)
+    ,m_line(line)
+    ,m_elapse(elapse)
+    ,m_threadId(thread_id)
+    ,m_fiberId(fiber_id)
+    ,m_time(time)
+    // ,m_threadName(thread_name)
+    // ,m_logger(logger)
+    // ,m_level(level) 
+    {
+}
 // const char* m_file = nullptr;      //文件名
 //     int32_t m_line = 0;                //行号
 //     uint32_t m_elapse= 0;              //程序启动开始到现在的毫秒数 
@@ -170,12 +169,19 @@ private:
 //     uint64_t m_time;                   //时间戳
 //     std::string m_content;
 Logger::Logger(const std::string& name) 
-    :m_name(name) {
+    :m_name(name)
+    ,m_level(LogLevel::DEBUG) {
+
+    m_formatter.reset(new LogFormatter("%d{%Y-%m-%d %H:%M:%S}%T%t%T%N%T%F%T[%p]%T[%c]%T%f:%l%T%m%n"));
 
 }
 
 
 void Logger::addAppender(LogAppender::ptr appender){
+    if(!appender->getFormatter()) {
+        // MutexType::Lock ll(appender->m_mutex);
+        appender->setFormatter(m_formatter);
+    }
     m_appenders.push_back(appender);
 }
  
@@ -190,8 +196,9 @@ void Logger::delAppender(LogAppender::ptr appender){
 
 void Logger::log(LogLevel::Level level, LogEvent::ptr event){
     if(level >= m_level) {
+        auto self = shared_from_this();
         for(auto& i : m_appenders) {
-            i->log(level,event);
+            i->log(self, level,event);
         }
     }
 }
@@ -305,13 +312,13 @@ void LogFormatter::init() {
         }
         if(fmt_status == 0) {
             if(!nstr.empty()){
-                vec.push_back(std::make_tuple(nstr, "", 0));
-            nstr.clear();
+                vec.push_back(std::make_tuple(nstr, std::string(), 0));
+                nstr.clear();
             }
             vec.push_back(std::make_tuple(str, fmt, 1));
             i = n-1;
         }else if(fmt_status == 1){
-            std::cout << "pattern_error" << "-" << m_pattern.substr(i) << std::endl;
+            std::cout << "pattern parse error: " << m_pattern << " - " << m_pattern.substr(i) << std::endl;
             //m_error = true;
             vec.push_back(std::make_tuple("<<pattern_error>>", fmt, 0));
         }
